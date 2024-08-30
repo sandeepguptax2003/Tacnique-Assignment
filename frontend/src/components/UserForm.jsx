@@ -27,13 +27,13 @@ function UserForm({ onSubmit, initialData, onSuccess }) {
 
     try {
       if (initialData) {
-        await axios.put(`http://localhost:5000/api/users/${initialData._id}`, formData, {
+        await axios.put(`https://tacnique-assignment-backend.onrender.com/api/users/${initialData._id}`, formData, {
           headers: {
             'Content-Type': 'application/json',
           },
         });
       } else {
-        await axios.post('http://localhost:5000/api/users', formData, {
+        await axios.post('https://tacnique-assignment-backend.onrender.com/api/users', formData, {
           headers: {
             'Content-Type': 'application/json',
           },

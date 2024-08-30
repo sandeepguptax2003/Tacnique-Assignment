@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/users';
+const API_URL = 'https://tacnique-assignment-backend.onrender.com/api/users';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
