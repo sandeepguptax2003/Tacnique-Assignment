@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ThemeProvider, createTheme, styled } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, Paper, useMediaQuery } from '@mui/material';
+import { QueryClient, QueryClientProvider, useInfiniteQuery } from 'react-query';
+import InfiniteScroll from 'react-infinite-scroll-component';
+import { motion } from 'framer-motion';
 import Header from './components/Header';
 import UserList from './components/UserList';
 import UserForm from './components/UserForm';
@@ -54,53 +57,56 @@ const ScrollableContent = styled(Box)(({ theme }) => ({
   },
 }));
 
+const queryClient = new QueryClient();
+
 function App() {
-  const [users, setUsers] = useState([]);
-  const [error, setError] = useState('');
   const [editingUser, setEditingUser] = useState(null);
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const fetchedUsers = await getUsers();
-      setUsers(fetchedUsers);
-    } catch (err) {
-      setError(`Failed to fetch users: ${err.message}`);
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isLoading,
+    isError,
+    isFetching,
+  } = useInfiniteQuery(
+    'users',
+    ({ pageParam = 1 }) => getUsers(pageParam),
+    {
+      getNextPageParam: (lastPage, pages) => {
+        if (lastPage.length === 0) return undefined;
+        return pages.length + 1;
+      },
     }
-  };
+  );
 
   const handleCreateUser = async (userData) => {
     try {
-      const newUser = await createUser(userData);
-      setUsers([...users, newUser]);
-      setError('');
+      await createUser(userData);
+      queryClient.invalidateQueries('users');
     } catch (err) {
-      setError(`Failed to create user: ${err.message}`);
+      console.error('Failed to create user:', err);
     }
   };
 
   const handleUpdateUser = async (id, userData) => {
     try {
-      const updatedUser = await updateUser(id, userData);
-      setUsers(users.map(user => user._id === id ? updatedUser : user));
+      await updateUser(id, userData);
+      queryClient.invalidateQueries('users');
       setEditingUser(null);
-      setError('');
     } catch (err) {
-      setError(`Failed to update user: ${err.message}`);
+      console.error('Failed to update user:', err);
     }
   };
 
   const handleDeleteUser = async (id) => {
     try {
       await deleteUser(id);
-      setUsers(users.filter(user => user._id !== id));
-      setError('');
+      queryClient.invalidateQueries('users');
     } catch (err) {
-      setError(`Failed to delete user: ${err.message}`);
+      console.error('Failed to delete user:', err);
     }
   };
 
@@ -111,23 +117,43 @@ function App() {
         <Header isMobile={isMobile} />
         <ScrollableContent>
           <Box sx={{ p: { xs: 1, sm: 2 }, width: '100%' }}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <FullWidthPaper elevation={3}>
+                <h1 style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>User Management Form</h1>
+                {isError && <ErrorMessage message={error.message} />}
+                <UserForm 
+                  onSubmit={editingUser ? handleUpdateUser : handleCreateUser} 
+                  initialData={editingUser}
+                  onSuccess={() => queryClient.invalidateQueries('users')}
+                  isMobile={isMobile}
+                />
+              </FullWidthPaper>
+            </motion.div>
             <FullWidthPaper elevation={3}>
-              <h1 style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>User Management Form</h1>
-              {error && <ErrorMessage message={error} />}
-              <UserForm 
-                onSubmit={editingUser ? handleUpdateUser : handleCreateUser} 
-                initialData={editingUser}
-                onSuccess={fetchUsers}
-                isMobile={isMobile}
-              />
-            </FullWidthPaper>
-            <FullWidthPaper elevation={3}>
-              <UserList 
-                users={users} 
-                onDelete={handleDeleteUser} 
-                onEdit={setEditingUser}
-                isMobile={isMobile}
-              />
+              <InfiniteScroll
+                dataLength={data ? data.pages.flatMap(page => page).length : 0}
+                next={fetchNextPage}
+                hasMore={hasNextPage}
+                loader={<h4>Loading...</h4>}
+                endMessage={
+                  <p style={{ textAlign: 'center' }}>
+                    <b>Yay! You have seen it all</b>
+                  </p>
+                }
+              >
+                <UserList 
+                  users={data ? data.pages.flatMap(page => page) : []}
+                  onDelete={handleDeleteUser} 
+                  onEdit={setEditingUser}
+                  isMobile={isMobile}
+                  isLoading={isLoading}
+                  isFetching={isFetching}
+                />
+              </InfiniteScroll>
             </FullWidthPaper>
           </Box>
         </ScrollableContent>
@@ -136,4 +162,12 @@ function App() {
   );
 }
 
-export default App;
+function WrappedApp() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  );
+}
+
+export default WrappedApp;
