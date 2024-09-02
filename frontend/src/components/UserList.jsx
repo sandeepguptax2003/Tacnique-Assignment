@@ -3,7 +3,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
   IconButton, Avatar, Card, CardContent, Typography, Grid 
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Visibility as ViewIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { ClipLoader } from 'react-spinners';
 
@@ -34,7 +34,7 @@ function UserList({ users, onDelete, onEdit, isLoading, isFetching }) {
                   <Typography color="textSecondary">{user.department}</Typography>
                   <div>
                     <IconButton aria-label="view" color="primary">
-                      <ViewIcon />
+                      
                     </IconButton>
                     <IconButton aria-label="edit" color="primary" onClick={() => onEdit(user)}>
                       <EditIcon />
@@ -77,7 +77,7 @@ function UserList({ users, onDelete, onEdit, isLoading, isFetching }) {
                 <TableCell>{user.department}</TableCell>
                 <TableCell>
                   <IconButton aria-label="view" color="primary">
-                    <ViewIcon />
+                    
                   </IconButton>
                   <IconButton aria-label="edit" color="primary" onClick={() => onEdit(user)}>
                     <EditIcon />

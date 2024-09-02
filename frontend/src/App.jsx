@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ThemeProvider, createTheme, styled } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Paper, useMediaQuery } from '@mui/material';
+import { Box, Paper, useMediaQuery, Pagination } from '@mui/material';
 import { QueryClient, QueryClientProvider, useInfiniteQuery } from 'react-query';
-import InfiniteScroll from 'react-infinite-scroll-component';
 import { motion } from 'framer-motion';
 import Header from './components/Header';
 import UserList from './components/UserList';
@@ -57,23 +56,29 @@ const ScrollableContent = styled(Box)(({ theme }) => ({
   },
 }));
 
+const PaginationContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  marginTop: theme.spacing(2),
+}));
+
 const queryClient = new QueryClient();
 
 function App() {
   const [editingUser, setEditingUser] = useState(null);
+  const [page, setPage] = useState(1);
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const {
     data,
     error,
-    fetchNextPage,
     hasNextPage,
     isLoading,
     isError,
     isFetching,
   } = useInfiniteQuery(
-    'users',
-    ({ pageParam = 1 }) => getUsers(pageParam),
+    ['users', page],
+    ({ pageParam = page }) => getUsers(pageParam),
     {
       getNextPageParam: (lastPage, pages) => {
         if (lastPage.length === 0) return undefined;
@@ -110,6 +115,11 @@ function App() {
     }
   };
 
+  const handlePageChange = (event, value) => {
+    setPage(value);
+    queryClient.invalidateQueries(['users', value]);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -125,8 +135,8 @@ function App() {
               <FullWidthPaper elevation={3}>
                 <h1 style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>User Management Form</h1>
                 {isError && <ErrorMessage message={error.message} />}
-                <UserForm 
-                  onSubmit={editingUser ? handleUpdateUser : handleCreateUser} 
+                <UserForm
+                  onSubmit={editingUser ? handleUpdateUser : handleCreateUser}
                   initialData={editingUser}
                   onSuccess={() => queryClient.invalidateQueries('users')}
                   isMobile={isMobile}
@@ -134,26 +144,23 @@ function App() {
               </FullWidthPaper>
             </motion.div>
             <FullWidthPaper elevation={3}>
-              <InfiniteScroll
-                dataLength={data ? data.pages.flatMap(page => page).length : 0}
-                next={fetchNextPage}
-                hasMore={hasNextPage}
-                loader={<h4>Loading...</h4>}
-                endMessage={
-                  <p style={{ textAlign: 'center' }}>
-                    <b>Yay! You have seen it all</b>
-                  </p>
-                }
-              >
-                <UserList 
-                  users={data ? data.pages.flatMap(page => page) : []}
-                  onDelete={handleDeleteUser} 
-                  onEdit={setEditingUser}
-                  isMobile={isMobile}
-                  isLoading={isLoading}
-                  isFetching={isFetching}
+              <UserList
+                users={data ? data.pages.flatMap((page) => page) : []}
+                onDelete={handleDeleteUser}
+                onEdit={setEditingUser}
+                isMobile={isMobile}
+                isLoading={isLoading}
+                isFetching={isFetching}
+              />
+              <PaginationContainer>
+                <Pagination
+                  count={hasNextPage ? page + 1 : page}
+                  page={page}
+                  onChange={handlePageChange}
+                  color="primary"
+                  size={isMobile ? 'small' : 'medium'}
                 />
-              </InfiniteScroll>
+              </PaginationContainer>
             </FullWidthPaper>
           </Box>
         </ScrollableContent>
